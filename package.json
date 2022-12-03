@@ -1,0 +1,16 @@
+{
+  "name": "remote",
+  "version": "0.1.0",
+  "private": false,
+  "description": "",
+  "license": "AGPL-3.0",
+  "author": "GB <guillaume.bourel@ac-mayotte.fr>",
+  "devDependencies": {
+    "marked": "^4.0.14",
+    "npm-run-all": "^4.1.5"
+  },
+  "scripts": {
+    "dev": "live-server --host=ileauxsciences.test --port=7971 public",
+    "start": "run-p --print-label dev"
+  }
+}
