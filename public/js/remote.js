@@ -467,30 +467,61 @@ init();
 const responseCallbacks = {};
 const handlers = {};
 
-let ws = null;
-let idCounter = 0;
-
+let _ws = null;
+let _idCounter = 0;
 
 // Return next msg id
 function getId () {
-  return idCounter++;
+  return _idCounter++;
+}
+
+function getWSToken() {
+  return new Promise((resolve, reject) => {
+    let atok = getAuthToken();
+    if(!atok) {
+      debug('[WS] Auth token not found');
+      return resolve(null);
+    }
+    fetch(LCMS_URL + '/api/nsixSignin', {
+      'method': 'POST',
+      'headers': {
+        'Authorization': 'Bearer ' + atok,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      }
+    }).then(res => {
+      let json = null;
+      if(res.status === 200) {
+        json = res.json();
+      }
+      return json;
+    }).then(data => {
+      debug('[WS] Signed in', JSON.stringify(data, '', ' '));
+      resolve(data.token);
+    }).catch(err => {
+      debug('[WS] Unable to fetch token', err);
+      resolve(null);
+    });
+    return null;
+  });
 }
 
 // Manual connection
-function connectWS (cb) {
-  if (ws && ws.readyState === ws.OPEN) { // already connected
+async function connectWS (cb) {
+  if (_ws && _ws.readyState === _ws.OPEN) { // already connected
     return cb && cb();
   }
-  let token = getAuthToken();
-  debug('Token', token)
+  let token = await getWSToken();
+  debug('[WS] Token', token)
   if (!token) {
-    debug('Auth token not found');
+    debug('[WS] WS token not found');
     return cb && cb();
   }
-  ws = new WebSocket(WS_URL + '?' + token);
-  debug('Websocket connection');
+  _ws = new WebSocket(WS_URL + '?' + token);
+  debug('[WS] connection');
   // On new WS message
-  ws.onmessage = function (message) {
+  _ws.onmessage = function (message) {
+    debug(' [WS] message', message)
     if (!message) { return; }
     // if message has some data
     if (message.data) {
@@ -511,20 +542,35 @@ function connectWS (cb) {
     }
   }
 
-  ws.onclose = function () {
-    debug('Disconnected');
+  _ws.onclose = function () {
+    debug('[WS] disconnected');
     // localStorage.removeItem(TOKEN)
   }
 
   if (cb) {
-    ws.onopen = function () {
+    _ws.onopen = function () {
       cb();
     }
   }
 }
 
+// Wait for WS connection to execute callback
+function waitForConnection (cb) {
+  setTimeout(() => {
+    if (!_ws) {
+      connectWS(cb)
+    } else if (_ws.readyState === _ws.OPEN) {
+      cb()
+    } else if (_ws.readyState === _ws.CLOSED) {
+      connectWS(cb)
+    } else {
+      waitForConnection(cb)
+    }
+  }, 100)
+}
+
 function sendWS (event, data, cb) {
-  debug('WSService send', event, JSON.stringify(data))
+  debug('[WS] Send', event, JSON.stringify(data))
   let msg = {
     event: event,
     data: data
@@ -533,24 +579,28 @@ function sendWS (event, data, cb) {
     msg.id = getId()
     responseCallbacks[msg.id] = cb
   }
-  if (ws && ws.readyState === ws.OPEN) {
-    ws.send(JSON.stringify(msg))
-  } else if (ws && ws.readyState === ws.CLOSED) {
-    connect(() => {
-      ws.send(JSON.stringify(msg))
+  if (_ws && _ws.readyState === _ws.OPEN) {
+    _ws.send(JSON.stringify(msg))
+  } else if (_ws && _ws.readyState === _ws.CLOSED) {
+    connectWS(() => {
+      _ws.send(JSON.stringify(msg))
     })
   } else {
     waitForConnection(() => {
-      if (ws) {
-        ws.send(JSON.stringify(msg))
+      if (_ws) {
+        _ws.send(JSON.stringify(msg))
       }
       // FIXME else : missing WS ?
     })
   }
 }
 
+
+
 connectWS(() => {
-  ws.send('get_user', user => { console.info('Found', user); });
+  sendWS('get_user', null, user => {
+    console.info('Found user', user);
+  });
 });
 
 })();
