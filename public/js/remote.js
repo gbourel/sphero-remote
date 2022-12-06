@@ -1,6 +1,6 @@
 (function (){
 
-const VERSION = 'v0.1.0';
+const VERSION = 'v0.2.6';
 document.getElementById('version').textContent = VERSION;
 
 const host = window.location.host;
@@ -19,7 +19,7 @@ let NSIX_LOGIN_URL = 'http://app.nsix.fr/connexion'
 let LCMS_URL = 'https://webamc.nsix.fr';
 let WS_URL = 'wss://webamc.nsix.fr';
 let COOKIE_DOMAIN = '.nsix.fr';
-// Local storage identifiers
+let LOCAL_SERVER = 'ws://localhost:7007';
 
 if(dev) {
   NSIX_LOGIN_URL = 'http://ileauxsciences.test:4200/connexion';
@@ -30,6 +30,15 @@ if(dev) {
 
 let _user = null;
 let _token = null;
+
+// WS variables
+
+const responseCallbacks = {};
+const handlers = {};
+
+let _ws = null;
+let _idCounter = 0;
+
 
 // Callback on exercise achievement
 function displaySuccess() {
@@ -388,18 +397,20 @@ function builtinRead(file) {
 
 function sendProgram(){
   const prgm = _pythonEditor.getValue();
-  debug('Send program\n' + prgm);
+  debug('[Send] Send program\n' + prgm);
+  sendWS('send_program', { 'program': prgm }, res => {
+    debug('[Send] response', res);
+  });
 }
 
-function init(){
-  let purl = new URL(window.location.href);
-  if(purl && purl.searchParams) {
-    let index = purl.searchParams.get("index");
-    if(index) {
-      _exerciseIdx = index;
-    }
-    let challenge = purl.searchParams.get('challenge');
-  }
+function initClient(){
+  // let purl = new URL(window.location.href);
+  // if(purl && purl.searchParams) {
+  //   let index = purl.searchParams.get("index");
+  //   if(index) {
+  //     _exerciseIdx = index;
+  //   }
+  // }
 
   (Sk.TurtleGraphics || (Sk.TurtleGraphics = {})).target = 'turtlecanvas';
   Sk.onAfterImport = function(library) {
@@ -426,13 +437,13 @@ function init(){
       }
     }
   });
-  addEventListener('popstate', evt => {
-    if(evt.state && evt.state.level) {
-      loadExercises(evt.state.level);
-    } else {
-      displayMenu();
-    }
-  });
+  // addEventListener('popstate', evt => {
+  //   if(evt.state && evt.state.level) {
+  //     loadExercises(evt.state.level);
+  //   } else {
+  //     displayMenu();
+  //   }
+  // });
 
   loadUser((user) => {
     // TODO session cache
@@ -448,9 +459,134 @@ function init(){
     }
 
     displayMenu();
+    connectWS();
     hideLoading();
   });
 }
+
+async function startPrgm(prgm) {
+  debug('Start program', prgm);
+  _localSocket.send(JSON.stringify({
+    'cmd': 'start_program',
+    'data': prgm
+  }));
+}
+
+async function refreshPrograms(status){
+  let parent = document.getElementById('main-list');
+  parent.innerHTML = '';
+  debug('Status', status);
+  if(!status.programs || status.programs.length === 0) {
+    document.getElementById('empty-msg').classList.remove('hidden');
+  } else {
+    document.getElementById('empty-msg').classList.add('hidden');
+    let first = true;
+    for (let p of status.programs) {
+      debug('Refresh program', p);
+      let lineTemplate = document.querySelector('#prgm-line');
+      let line = document.importNode(lineTemplate.content, true);
+      line.querySelector('.name').textContent = p.student;
+      line.querySelector('.state .start').addEventListener('click', () => startPrgm(p));
+
+      if(p.state === 'READY') {
+        line.querySelector('.prgm').classList.remove('grayscale');
+        line.querySelector('.state .logo').classList.add('hidden');
+        line.querySelector('.state .start').classList.remove('hidden');
+      } else if(p.state === 'RUNNING') {
+        line.querySelector('.prgm').classList.remove('grayscale');
+        line.querySelector('.state .logo').classList.add('rotating');
+        line.querySelector('.state .start').classList.add('hidden');
+      } else {
+        line.querySelector('.prgm').classList.add('grayscale');
+        line.querySelector('.state .logo').classList.remove('rotating');
+        line.querySelector('.state .start').classList.add('hidden');
+      }
+      parent.appendChild(line);
+    }
+  }
+}
+
+let _localSocket = null;
+function localConnect(){
+  _localSocket = new WebSocket(LOCAL_SERVER);
+  debug('[LS] connection');
+  // On new WS message
+  _localSocket.onmessage = function (message) {
+    if (!message) { return; }
+    // if message has some data
+    if (message.data) {
+      const content = JSON.parse(message.data);
+      debug(' [LS] message', content)
+      refreshPrograms(content)
+    }
+  }
+
+  _localSocket.onclose = function () {
+    debug('[LS] disconnected');
+    // localStorage.removeItem(TOKEN)
+  }
+
+  _localSocket.onopen = function () {
+    debug('[LS] connected');
+    _localSocket.send(JSON.stringify({'cmd': 'get_status'}));
+
+    // _localSocket.send(JSON.stringify({
+    //   'cmd': 'add_program',
+    //   'data' : {
+    //    'id': '234',
+    //    'student': 'Doe John',
+    //    'program': 'import time\nimport sphero\n\norb = sphero.init()\n\norb.connect()\norb.set_rgb_led(120,0,0)\ntime.sleep(1)\n\norb.roll(30, 0)\n',
+    //    'state': 'WAITING'
+    //   }
+    // }));
+  }
+}
+
+function initTeacher(){
+  loadUser(async (user) => {
+    // TODO session cache
+    debug('User loaded', user);
+
+    if(user) {
+      _user = user;
+      document.getElementById('username').innerHTML = user.firstName || 'Moi';
+      document.getElementById('profile-menu').classList.remove('hidden');
+      localConnect();
+      // try {
+      //   const res = await fetch(LOCAL_SERVER + '/status');
+      //   const status = await res.json();
+      //   refreshPrograms(status);
+      // } catch(err) {
+      //   console.error('Unable to connect to local command server', err);
+      // }
+    } else {
+      document.getElementById('login').classList.remove('hidden');
+      _user = null;
+    }
+
+    // displayMenu();
+    connectWS(() => {
+      sendWS('connect_btsender', null, res => {
+        debug('[Send] response', res);
+      });
+    });
+    hideLoading();
+  });
+}
+
+handlers['__add_program'] = [(data) => {
+  // Forward to local server
+  console.info('add program !', JSON.stringify(data, '', ' '));
+  _localSocket.send(JSON.stringify({
+    'cmd': 'add_program',
+    'data' : {
+     'id': '234',
+     'student': data.student,
+     'program': data.program
+     // 'state': 'WAITING'
+    }
+  }));
+}];
 
 // if in iframe (i.e. nsix challenge)
 _nsix = window.location !== window.parent.location;
@@ -459,16 +595,14 @@ for (let e of elts) {
   e.classList.remove('hidden');
 }
 
-init();
 
+if(location.href.endsWith('teacher.html')) {
+  initTeacher()
+} else {
+  initClient();
+}
 
 /***** Web socket connection *****/
-
-const responseCallbacks = {};
-const handlers = {};
-
-let _ws = null;
-let _idCounter = 0;
 
 // Return next msg id
 function getId () {
@@ -496,7 +630,7 @@ function getWSToken() {
       }
       return json;
     }).then(data => {
-      debug('[WS] Signed in', JSON.stringify(data, '', ' '));
+      debug('[WS] Signed in', data);
       resolve(data.token);
     }).catch(err => {
       debug('[WS] Unable to fetch token', err);
@@ -508,11 +642,11 @@ function getWSToken() {
 
 // Manual connection
 async function connectWS (cb) {
+  console.info(_ws);
   if (_ws && _ws.readyState === _ws.OPEN) { // already connected
     return cb && cb();
   }
   let token = await getWSToken();
-  debug('[WS] Token', token)
   if (!token) {
     debug('[WS] WS token not found');
     return cb && cb();
@@ -594,13 +728,5 @@ function sendWS (event, data, cb) {
     })
   }
 }
-
-
-
-connectWS(() => {
-  sendWS('get_user', null, user => {
-    console.info('Found user', user);
-  });
-});
 
 })();

@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <title>Commande à distance</title>
+  <meta charset="utf-8">
+  <meta name="robots" content="noindex">
+  <link rel="stylesheet" href="lib/katex/katex.min.css">
+  <link rel="stylesheet" href="lib/codemirror/codemirror.css">
+  <link rel="stylesheet" href="lib/codemirror/monokai.css">
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body class="p-4 bg-slate-600 text-white">
+  <div id="loading" class="z-20">
+    <img src="img/logo-sphero.png" alt="Logo Python">
+  </div>
+  <div id="profile" class="float-right relative">
+    <button id="login" class="hidden m-5 p-1 shadow-lg rounded px-2 text-slate-00" type="button">Connexion</button>
+    <div id="profile-menu" class="hidden mt-5 mr-2">
+      <button id="profileMenuBtn" type="button" class="m-1 p-2 bg-slate-900 flex text-xs rounded">
+        <span id="username">Moi</span>
+      </button>
+      <div id="profileMenu" class="hidden absolute top-14 right-3 shadow-md rounded bg-slate-900 text-gray-300 ring-1 ring-gray-300" >
+        <div id="logoutBtn" class="p-3 cursor-pointer">Déconnexion</div>
+      </div>
+    </div>
+    <div class="hidden origin-top-right absolute top-12 right-5 mt-2 w-36 rounded-md shadow-lg py-1 bg-white ring-1 ring-black ring-opacity-5 focus:outline-none" role="menu" aria-orientation="vertical" aria-labelledby="user-menu-button" tabindex="-1">
+      <!-- Active: "bg-gray-100", Not Active: "" -->
+      <a id="logout" href="http://ileauxsciences.test:4200/deconnexion" class="block px-4 py-2 text-sm text-gray-700" role="menuitem" tabindex="-1">Déconnexion</a>
+    </div>
+  </div>
+
+  <header class="p-4 rounded-t-lg">
+    <h3>
+      <img src="img/controller.png" alt="Logo" class="inline-block" width="56px">
+      <span id="title" class="text-blue-300 font-bold">Contrôle du robot Sphero</span>
+    </h3>
+    <svg id="progress" class="hidden"></svg>
+    <p id="instruction"></p>
+  </header>
+  <main id="programs-list">
+    <div id="empty-msg">Aucun programme reçu pour l'instant.</div>
+    <div id="main-list"></div>
+  </main>
+
+  <template id="prgm-line">
+    <div class="prgm">
+      <img src="img/prgm-logo.png" alt="Logo program">
+      <div class="desc"><span>Programme de </span><span class="name"></span></div>
+      <div class="state">
+        <img class="start" src="img/play.png">
+        <img class="logo" src="img/logo-sphero.png">
+      </div>
+    </div>
+  </template>
+
+  <div id="login-required">
+    <div id="login-popup">
+      <span>Connexion nécessaire pour cette commande.</span>
+      <button id="login2" class="m-5 p-1 shadow-lg bg-blue-600 rounded px-2 text-slate-00" type="button">Connexion</button>
+    </div>
+  </div>
+  <span id="version"></span>
+
+  <script async src="js/remote.js" type="module"></script>
+</body>
+
+</html>
