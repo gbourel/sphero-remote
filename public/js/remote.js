@@ -395,6 +395,18 @@ function builtinRead(file) {
   return Sk.builtinFiles.files[file];
 }
 
+function enableSend(){
+  let sb = document.getElementById('sendbtn');
+  sb.disabled = false;
+  sb.innerText='Envoyer';
+}
+
+function disableSend(){
+  let sb = document.getElementById('sendbtn');
+  sb.disabled = true;
+  sb.innerText='Serveur bluetooth non trouvé';
+}
+
 function sendProgram(){
   const prgm = _pythonEditor.getValue();
   debug('[Send] Send program\n' + prgm);
@@ -406,7 +418,8 @@ function sendProgram(){
 function initClient(){
   // let purl = new URL(window.location.href);
   // if(purl && purl.searchParams) {
-  //   let index = purl.searchParams.get("index");
+  //   let index = purl.searchParams.get("command");
+  //   console.info('index', index)
   //   if(index) {
   //     _exerciseIdx = index;
   //   }
@@ -445,7 +458,7 @@ function initClient(){
   //   }
   // });
 
-  loadUser((user) => {
+  loadUser(user => {
     // TODO session cache
     debug('User loaded', user);
 
@@ -453,13 +466,25 @@ function initClient(){
       _user = user;
       document.getElementById('username').innerHTML = user.firstName || 'Moi';
       document.getElementById('profile-menu').classList.remove('hidden');
+      connectWS(() => {
+        sendWS('status_btsender', null, res => {
+          debug(' [Status] response', res);
+          if(res.status === 'err') {
+            disableSend();
+          } else {
+            enableSend();
+          }
+        });
+      });
+      if(location.hash && location.hash.match('#command')) {
+        loadCommands(true);
+      }
     } else {
       document.getElementById('login').classList.remove('hidden');
       _user = null;
+      displayMenu();
     }
 
-    displayMenu();
-    connectWS();
     hideLoading();
   });
 }
@@ -567,7 +592,7 @@ function initTeacher(){
     // displayMenu();
     connectWS(() => {
       sendWS('connect_btsender', null, res => {
-        debug('[Send] response', res);
+        debug(' [Connect] response', res);
       });
     });
     hideLoading();
@@ -587,6 +612,9 @@ handlers['__add_program'] = [(data) => {
     }
   }));
 }];
+
+handlers['btsender_connected'] = [enableSend];
+handlers['btsender_disconnected'] = [disableSend];
 
 // if in iframe (i.e. nsix challenge)
 _nsix = window.location !== window.parent.location;
@@ -668,9 +696,13 @@ async function connectWS (cb) {
       } else {
         const list = handlers[content.event];
         if (list) {
-          list.forEach(h => {
-            if (h) { h(content.data); }
-          })
+          if(Array.isArray(list)){
+            list.forEach(h => {
+              if (h) { h(content.data); }
+            })
+          } else {
+            list(content.data);
+          }
         }
       }
     }
