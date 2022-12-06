@@ -1,6 +1,6 @@
 (function (){
 
-const VERSION = 'v0.2.6';
+const VERSION = 'v0.2.7';
 document.getElementById('version').textContent = VERSION;
 
 const host = window.location.host;
@@ -61,7 +61,7 @@ let main = null;
 
 function initPythonEditor() {
   _pythonEditor = CodeMirror(document.getElementById('pythonsrc'), {
-    value: "import sphero\n\norb = sphero.connect()",
+    value: "import sphero\nimport time\n\norb = sphero.init()\norb.connect()\n\norb.set_rgb_led(0,120,0)\n\norb.roll(50, 180)\ntime.sleep(1)\n",
     mode:  "python",
     lineNumbers: true,
     theme: 'monokai',
