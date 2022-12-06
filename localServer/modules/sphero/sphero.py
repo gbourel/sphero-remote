@@ -347,7 +347,24 @@ class Sphero(object):
 
     """ Sphero functionality """
 
-    def roll(self, speed, heading, resp=False):
+    def wait(secondes):
+        time.sleep(secondes)
+        return
+
+    def move(self, heading, resp=False):
+        """
+        Roll the ball towards the heading at speed 40
+
+        heading - (int) which direction, 0 - 359
+        resp - (bool) whether the code will wait for comfirmation from Sphero
+        """
+        speed = 40
+        heading_bytes = heading.to_bytes(2,byteorder='big')
+        data = [speed,heading_bytes[0],heading_bytes[1], 1]
+        #send command
+        self.command('30',data, resp=resp)
+
+    def roll(self, heading, speed, resp=False):
         """
         Roll the ball towards the heading
 
@@ -359,7 +376,6 @@ class Sphero(object):
         data = [speed,heading_bytes[0],heading_bytes[1], 1]
         #send command
         self.command('30',data, resp=resp)
-
 
     def boost(self):
         raise NotImplementedError
@@ -605,4 +621,11 @@ def init():
     SPHERO_BT_ADDRESS="C6:20:1B:BF:BE:86"
     return Sphero(SPHERO_BT_ADDRESS)
 
+def connect():
+    d = init()
+    d.connect()
+    return True
 
+# roll angle, vitesse, durée
+
+#
