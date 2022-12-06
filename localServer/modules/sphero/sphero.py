@@ -347,7 +347,7 @@ class Sphero(object):
 
     """ Sphero functionality """
 
-    def wait(secondes):
+    def wait(self, secondes):
         time.sleep(secondes)
         return
 
@@ -624,7 +624,7 @@ def init():
 def connect():
     d = init()
     d.connect()
-    return True
+    return d
 
 # roll angle, vitesse, durée
 
