@@ -1,6 +1,6 @@
 (function (){
 
-const VERSION = 'v0.3.3';
+const VERSION = 'v0.3.4';
 document.getElementById('version').textContent = VERSION;
 
 const host = window.location.host;
@@ -373,14 +373,18 @@ function builtinRead(file) {
 
 function enableSend(){
   let sb = document.getElementById('sendbtn');
-  sb.disabled = false;
-  sb.innerText='Envoyer';
+  if (sb) {
+    sb.disabled = false;
+    sb.innerText='Envoyer';
+  }
 }
 
 function disableSend(){
   let sb = document.getElementById('sendbtn');
-  sb.disabled = true;
-  sb.innerText='Serveur bluetooth non trouvé';
+  if (sb) {
+    sb.disabled = true;
+    sb.innerText='Serveur bluetooth non trouvé';
+  }
 }
 
 function sendProgram(){
