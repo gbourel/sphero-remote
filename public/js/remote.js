@@ -1,6 +1,6 @@
 (function (){
 
-const VERSION = 'v0.3.2';
+const VERSION = 'v0.3.3';
 document.getElementById('version').textContent = VERSION;
 
 const host = window.location.host;
@@ -92,7 +92,7 @@ function displayCommands() {
   if(lastprog && lastprog.length) {
     _pythonEditor.setValue(lastprog);
   }
-  instruction.innerHTML = marked.parse('Les fonctions disponibles sont détaillées ici : ');
+  instruction.innerHTML = marked.parse('Programmation du robot _Sphero_ :');
 }
 
 // Display login required popup
