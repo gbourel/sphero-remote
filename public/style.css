@@ -1337,6 +1337,10 @@ span.katex {
   color: #444;
 }
 
+#turtlecanvas {
+  background: #DDE;
+}
+
 /* Success overlay  */
 
 #overlay {

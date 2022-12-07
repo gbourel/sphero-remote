@@ -1,11 +1,10 @@
 (function (){
 
-const VERSION = 'v0.2.8';
+const VERSION = 'v0.3.2';
 document.getElementById('version').textContent = VERSION;
 
 const host = window.location.host;
 const dev = host.startsWith('localhost') || host.startsWith('ileauxsciences.test');
-
 let debug = () => {};
 if(dev) {
   debug = console.info;
@@ -30,6 +29,8 @@ if(dev) {
 
 let _user = null;
 let _token = null;
+
+let _over = false;  // python running
 
 // WS variables
 
@@ -110,9 +111,9 @@ function hideLoginPopup() {
 // Load command view
 function loadCommands(pushHistory){
   if(!_user) { return loginRequired(); }
-  // if(pushHistory) {
-  //   history.pushState({'level': level}, '', `/#niveau${level}`);
-  // }
+  if(pushHistory) {
+    history.pushState(null, '', `/#commands`);
+  }
   displayCommands();
 }
 
@@ -127,64 +128,64 @@ function resetProg(){
 
 // On Python script completion
 function onCompletion(mod) {
-  let nbFailed = _tests.length;
-  let table = document.importNode(document.querySelector('#results-table').content, true);
-  let lineTemplate = document.querySelector('#result-line');
-  if(_tests.length > 0 && _tests.length === _output.length) {
-    nbFailed = 0;
-    for (let i = 0 ; i < _tests.length; i++) {
-      let line = null;
-      if(_tests[i].option !== 'hide') {
-        line = document.importNode(lineTemplate.content, true);
-        let cells = line.querySelectorAll('td');
-        cells[0].textContent = _tests[i].python;
-        cells[1].textContent = _tests[i].value.trim();
-        cells[2].textContent = _output[i].trim();
-      }
-      if(_tests[i].value.trim() !== _output[i].trim()) {
-        nbFailed += 1;
-        line && line.querySelector('tr').classList.add('ko');
-      } else {
-        line && line.querySelector('tr').classList.add('ok');
-      }
-      if(line) {
-        let tbody = table.querySelector('tbody');
-        tbody.append(line);
-      }
-    }
-    if (nbFailed === 0) {
-      const answer = sha256(_output);
-      if(parent) {
-        parent.window.postMessage({
-          'answer': answer,
-          'from': 'pix'
-        }, '*');
-      }
-      registerSuccess(_exercise.id, answer);
-      displaySuccess();
-    }
-  }
-  const elt = document.createElement('div');
-  let content = '';
-  if(nbFailed > 0) {
-    elt.classList.add('failed');
-    content = `Résultat : ${_tests.length} test`;
-    if(_tests.length > 1) { content += 's'; }
-    content += `, ${nbFailed} échec`
-    if(nbFailed > 1) { content += 's'; }
-  } else {
-    elt.classList.add('success');
-    if(_tests.length > 1) {
-      content = `Succès des ${_tests.length} tests`;
-    } else {
-      content = `Succès de ${_tests.length} test`;
-    }
-  }
-  elt.innerHTML += `<div class="result">${content}</div>`;
-  if(_tests.find(t => t.option !== 'hide')){
-    elt.appendChild(table);
-  }
-  document.getElementById('output').appendChild(elt);
+//   let nbFailed = _tests.length;
+//   let table = document.importNode(document.querySelector('#results-table').content, true);
+//   let lineTemplate = document.querySelector('#result-line');
+//   if(_tests.length > 0 && _tests.length === _output.length) {
+//     nbFailed = 0;
+//     for (let i = 0 ; i < _tests.length; i++) {
+//       let line = null;
+//       if(_tests[i].option !== 'hide') {
+//         line = document.importNode(lineTemplate.content, true);
+//         let cells = line.querySelectorAll('td');
+//         cells[0].textContent = _tests[i].python;
+//         cells[1].textContent = _tests[i].value.trim();
+//         cells[2].textContent = _output[i].trim();
+//       }
+//       if(_tests[i].value.trim() !== _output[i].trim()) {
+//         nbFailed += 1;
+//         line && line.querySelector('tr').classList.add('ko');
+//       } else {
+//         line && line.querySelector('tr').classList.add('ok');
+//       }
+//       if(line) {
+//         let tbody = table.querySelector('tbody');
+//         tbody.append(line);
+//       }
+//     }
+//     if (nbFailed === 0) {
+//       const answer = sha256(_output);
+//       if(parent) {
+//         parent.window.postMessage({
+//           'answer': answer,
+//           'from': 'pix'
+//         }, '*');
+//       }
+//       registerSuccess(_exercise.id, answer);
+//       displaySuccess();
+//     }
+//   }
+//   const elt = document.createElement('div');
+//   let content = '';
+//   if(nbFailed > 0) {
+//     elt.classList.add('failed');
+//     content = `Résultat : ${_tests.length} test`;
+//     if(_tests.length > 1) { content += 's'; }
+//     content += `, ${nbFailed} échec`
+//     if(nbFailed > 1) { content += 's'; }
+//   } else {
+//     elt.classList.add('success');
+//     if(_tests.length > 1) {
+//       content = `Succès des ${_tests.length} tests`;
+//     } else {
+//       content = `Succès de ${_tests.length} test`;
+//     }
+//   }
+//   elt.innerHTML += `<div class="result">${content}</div>`;
+//   if(_tests.find(t => t.option !== 'hide')){
+//     elt.appendChild(table);
+//   }
+//   document.getElementById('output').appendChild(elt);
 }
 
 // Python script stdout
@@ -210,6 +211,7 @@ function runit() {
   if(_pythonEditor === null) { return; }
   let prog = _pythonEditor.getValue();
   let outputElt = document.getElementById('output');
+  outputElt.classList.remove('hidden');
   outputElt.innerHTML = '';
   Sk.pre = 'output';
   Sk.configure({
@@ -218,23 +220,24 @@ function runit() {
     __future__: Sk.python3
   });
   prog += "\nprint('### END_OF_USER_INPUT ###')";
-  for (let t of _tests) {
-    let instruction = t.python.trim();
-    if(!instruction.startsWith('print')) {
-      instruction = `print(${instruction})`;
-    }
-    prog += "\n" + instruction;
-  }
+  // for (let t of _tests) {
+  //   let instruction = t.python.trim();
+  //   if(!instruction.startsWith('print')) {
+  //     instruction = `print(${instruction})`;
+  //   }
+  //   prog += "\n" + instruction;
+  // }
   _output = [];
   _over = false;
-  if(prog.startsWith('import turtle')) {
+  // if(prog.startsWith('import turtle')) {
+    document.getElementById('pythonsrc').style.width = '50%';
     document.getElementById('turtlecanvas').classList.remove('hidden');
     outputElt.style.width = '100%';
-  }
-  if(prog.startsWith('import webgl')) {
-    document.getElementById('webglcanvas').classList.remove('hidden');
-    outputElt.style.width = '100%';
-  }
+  // }
+  // if(prog.startsWith('import webgl')) {
+  //   document.getElementById('webglcanvas').classList.remove('hidden');
+  //   outputElt.style.width = '100%';
+  // }
   Sk.misceval.asyncToPromise(function() {
     return Sk.importMainWithBody("<stdin>", false, prog, true);
   }).then(onCompletion,
@@ -350,39 +353,12 @@ function logout() {
   location.reload();
 }
 
-// function updateAchievements() {
-//   if(!_user || !_user.exercises) { return; }
-//   for (let i=1; i<4 ; i++){
-//     let elt = document.querySelector(`#level-${i} .percent`);
-//     let total =  _user.exercises[`level${i}`];
-//     let done = 0;
-//     for (let r of _user.results){
-//       if(r.level === i && r.done) {
-//         done++;
-//       }
-//     }
-//     let percent = 100.0 * done / total;
-//     let stars = Math.round(percent/20);
-//     let starsContent = '';
-//     for(let i = 1; i <= 5; i++){
-//       let color = 'text-gray-400';
-//       if(i <= stars) { color = 'text-yellow-500'; }
-//       starsContent += `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 fill-current ${color}"><path d="M8.128 19.825a1.586 1.586 0 0 1-1.643-.117 1.543 1.543 0 0 1-.53-.662 1.515 1.515 0 0 1-.096-.837l.736-4.247-3.13-3a1.514 1.514 0 0 1-.39-1.569c.09-.271.254-.513.475-.698.22-.185.49-.306.776-.35L8.66 7.73l1.925-3.862c.128-.26.328-.48.577-.633a1.584 1.584 0 0 1 1.662 0c.25.153.45.373.577.633l1.925 3.847 4.334.615c.29.042.562.162.785.348.224.186.39.43.48.704a1.514 1.514 0 0 1-.404 1.58l-3.13 3 .736 4.247c.047.282.014.572-.096.837-.111.265-.294.494-.53.662a1.582 1.582 0 0 1-1.643.117l-3.865-2-3.865 2z"></path></svg>`;
-//     }
-//     elt.innerHTML = `&nbsp; ${Math.round(percent)} % terminé`;
-//     document.querySelector(`#level-${i} .stars`).innerHTML = starsContent;
-//     document.querySelector(`#level-${i} .achievement`).title = `${done} / ${total} réussi${(done > 0) ? 's' : ''}`;
-//   }
-// }
-
-
 const skExternalLibs = {
-  './data.js': './lib/skulpt/externals/data.js',
+  './sphero.js': './lib/skulpt/externals/sphero.js',
   './snap.js': './lib/skulpt/externals/snap.js'
 };
 
 function builtinRead(file) {
-  // console.log("Attempting file: " + Sk.ffi.remapToJs(file));
   if (skExternalLibs[file] !== undefined) {
     return Sk.misceval.promiseToSuspension(
       fetch(skExternalLibs[file]).then(
@@ -427,7 +403,7 @@ function initClient(){
 
   (Sk.TurtleGraphics || (Sk.TurtleGraphics = {})).target = 'turtlecanvas';
   Sk.onAfterImport = function(library) {
-    console.info('Imported', library);
+    debug('[Skulpt] Imported', library);
   };
 
   marked.setOptions({
@@ -435,6 +411,7 @@ function initClient(){
   });
 
   document.getElementById('logoutBtn').addEventListener('click', logout);
+  document.getElementById('checkbtn').addEventListener('click', runit);
   document.getElementById('sendbtn').addEventListener('click', sendProgram);
   document.getElementById('homebtn').addEventListener('click', () => { displayMenu(); history.pushState(null, '', '/'); });
   document.getElementById('login').addEventListener('click', login);
@@ -476,7 +453,7 @@ function initClient(){
           }
         });
       });
-      if(location.hash && location.hash.match('#command')) {
+      if(location.hash && location.hash.match('#commands')) {
         loadCommands(true);
       }
     } else {
@@ -601,7 +578,7 @@ function initTeacher(){
 
 handlers['__add_program'] = [(data) => {
   // Forward to local server
-  console.info('add program !', JSON.stringify(data, '', ' '));
+  debug('Add program !', JSON.stringify(data, '', ' '));
   _localSocket.send(JSON.stringify({
     'cmd': 'add_program',
     'data' : {
@@ -670,7 +647,6 @@ function getWSToken() {
 
 // Manual connection
 async function connectWS (cb) {
-  console.info(_ws);
   if (_ws && _ws.readyState === _ws.OPEN) { // already connected
     return cb && cb();
   }
