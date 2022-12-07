@@ -1,6 +1,6 @@
 (function (){
 
-const VERSION = 'v0.3.4';
+const VERSION = 'v0.3.5';
 document.getElementById('version').textContent = VERSION;
 
 const host = window.location.host;
@@ -62,7 +62,7 @@ let main = null;
 
 function initPythonEditor() {
   _pythonEditor = CodeMirror(document.getElementById('pythonsrc'), {
-    value: "import sphero\n\norb = sphero.connect()\n\norb.set_rgb_led(0,120,0)\n\norb.move(0) # Se déplace direction 0°\norb.wait(1) # Attend 1s\norb.move(180) # Se déplace direction 180°\norb.wait(1) # Attend 1s\n",
+    value: "import sphero\n\norb = sphero.connect()\n\norb.set_rgb_led(0,120,0)\n\norb.move(0) # Se déplace direction 0°\norb.wait(1) # Attend 1s\n",
     mode:  "python",
     lineNumbers: true,
     theme: 'monokai',
