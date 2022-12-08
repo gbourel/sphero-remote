@@ -38,14 +38,22 @@
     <p id="instruction"></p>
   </header>
   <main id="programs-list">
+    <div id="missing-local-msg">Attention : pas de connexion au server bluetooth local.</div>
     <div id="empty-msg">Aucun programme reçu pour l'instant.</div>
     <div id="main-list"></div>
   </main>
 
   <template id="prgm-line">
     <div class="prgm">
-      <img src="img/prgm-logo.png" alt="Logo program">
+      <img class="avatar" src="img/prgm-logo.png" alt="Logo program">
       <div class="desc"><span>Programme de </span><span class="name"></span></div>
+      <div class="move">
+        <img class="up" src="img/up-arrow.2.svg">
+        <img class="down" src="img/up-arrow.2.svg">
+      </div>
+      <div class="remove">
+        <img class="delete" src="img/trashcan.1.svg">
+      </div>
       <div class="state">
         <img class="start" src="img/play.png">
         <img class="logo" src="img/logo-sphero.png">

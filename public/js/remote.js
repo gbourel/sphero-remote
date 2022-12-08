@@ -1,6 +1,6 @@
 (function (){
 
-const VERSION = 'v0.3.5';
+const VERSION = 'v0.4.0';
 document.getElementById('version').textContent = VERSION;
 
 const host = window.location.host;
@@ -40,12 +40,6 @@ const handlers = {};
 let _ws = null;
 let _idCounter = 0;
 
-
-// Callback on exercise achievement
-function displaySuccess() {
-  const successOverlay = document.getElementById('overlay');
-  successOverlay.classList.remove('hidden');
-}
 
 function displayMenu() {
   const menu = document.getElementById('mainmenu');
@@ -389,9 +383,14 @@ function disableSend(){
 
 function sendProgram(){
   const prgm = _pythonEditor.getValue();
+  const overlay = document.getElementById('overlay');
+  overlay.classList.remove('hidden');
   debug('[Send] Send program\n' + prgm);
   sendWS('send_program', { 'program': prgm }, res => {
     debug('[Send] response', res);
+    let relt = document.querySelector('#overlay .result');
+    relt.innerHTML = 'Envoyé !';
+    setTimeout(() => { overlay.classList.add('hidden'); }, 2000);
   });
 }
 
@@ -478,6 +477,23 @@ async function startPrgm(prgm) {
   }));
 }
 
+async function movePrgm(prgm, delta) {
+  debug('Start program', prgm);
+  let cmd = delta === 1 ? 'move_up' : 'move_down';
+  _localSocket.send(JSON.stringify({
+    'cmd': cmd,
+    'data': prgm
+  }));
+}
+
+async function deletePrgm(prgm) {
+  debug('Delete program', prgm);
+  _localSocket.send(JSON.stringify({
+    'cmd': 'remove_program',
+    'data': prgm
+  }));
+}
+
 async function refreshPrograms(status){
   let parent = document.getElementById('main-list');
   parent.innerHTML = '';
@@ -486,13 +502,16 @@ async function refreshPrograms(status){
     document.getElementById('empty-msg').classList.remove('hidden');
   } else {
     document.getElementById('empty-msg').classList.add('hidden');
-    let first = true;
     for (let p of status.programs) {
       debug('Refresh program', p);
       let lineTemplate = document.querySelector('#prgm-line');
       let line = document.importNode(lineTemplate.content, true);
       line.querySelector('.name').textContent = p.student;
+      line.querySelector('.avatar').src = 'https://robohash.org/' + p.student.replace(' ', '_');
       line.querySelector('.state .start').addEventListener('click', () => startPrgm(p));
+      line.querySelector('.up').addEventListener('click', () => movePrgm(p, 1));
+      line.querySelector('.down').addEventListener('click', () => movePrgm(p, -1));
+      line.querySelector('.delete').addEventListener('click', () => deletePrgm(p));
 
       if(p.state === 'READY') {
         line.querySelector('.prgm').classList.remove('grayscale');
@@ -529,13 +548,13 @@ function localConnect(){
 
   _localSocket.onclose = function () {
     debug('[LS] disconnected');
-    // localStorage.removeItem(TOKEN)
+    document.getElementById('missing-local-msg').classList.remove('hidden');
   }
 
   _localSocket.onopen = function () {
     debug('[LS] connected');
+    document.getElementById('missing-local-msg').classList.add('hidden');
     _localSocket.send(JSON.stringify({'cmd': 'get_status'}));
-
     // _localSocket.send(JSON.stringify({
     //   'cmd': 'add_program',
     //   'data' : {
@@ -586,10 +605,10 @@ handlers['__add_program'] = [(data) => {
   _localSocket.send(JSON.stringify({
     'cmd': 'add_program',
     'data' : {
-     'id': '234',
+     'studentId': data.studentId,
      'student': data.student,
-     'program': data.program
-     // 'state': 'WAITING'
+     'program': data.program,
+     'state': 'WAITING'
     }
   }));
 }];
