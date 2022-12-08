@@ -41,7 +41,7 @@ function $builtinmodule(name) {
   }
 
   function wait(self, duration) {
-  	if(duration > 0) {
+  	if(duration < 0) {
   		throw new Sk.builtin.ValueError(`wait, invalid duration value (${duration})`);
   	}
   	if(duration > 2) {
