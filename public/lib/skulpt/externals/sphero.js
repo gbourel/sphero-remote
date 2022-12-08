@@ -5,6 +5,7 @@ function $builtinmodule(name) {
 
   const mod = {};
 
+  let _connected = false;
   let _speed = 50;
   let _dir   = 0;
 
@@ -20,7 +21,7 @@ function $builtinmodule(name) {
 	}
 
   function move(self, dir) {
-		if(dir < 0 || dir > 360) {
+		if(dir < 0 || dir > 359) {
 			throw new Sk.builtin.ValueError(`move, invalid direction value (${dir})`);
 		}
 		_dir = dir;
@@ -40,6 +41,9 @@ function $builtinmodule(name) {
   }
 
   function wait(self, duration) {
+  	if(duration > 0) {
+  		throw new Sk.builtin.ValueError(`wait, invalid duration value (${duration})`);
+  	}
   	if(duration > 2) {
   		duration = 2;			// timeout de 2s
   	}
@@ -56,7 +60,14 @@ function $builtinmodule(name) {
 
   mod.Sphero = Sk.misceval.buildClass(mod, SpheroWrapper, "Sphero", []);
 
-  mod.connect = new Sk.builtin.func(function() {
+  mod.connect = new Sk.builtin.func(function(arg) {
+  	if (arg) {
+  		throw new Sk.builtin.ValueError(`connect error : argument invalid`);
+  	}
+  	if(_connected) {
+  		throw new Sk.builtin.ValueError(`already connected`);
+  	}
+  	_connected = true;
     var newInstance = Sk.misceval.callsimOrSuspendArray(mod.Sphero);
     return newInstance;
   });
