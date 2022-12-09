@@ -196,7 +196,7 @@ class Sphero(object):
         self._stream_rate = 10
         #load the mask list
         with open(os.path.join(os.path.dirname(__file__),'data','mask_list.yaml'),'r') as mask_file:
-            self._mask_list = yaml.load(mask_file)
+            self._mask_list = yaml.safe_load(mask_file)
         self._curr_data_mask = bytes.fromhex("0000 0000")
 
         self._notification_lock = threading.RLock()
