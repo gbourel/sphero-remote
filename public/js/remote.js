@@ -1,6 +1,6 @@
 (function (){
 
-const VERSION = 'v0.4.2';
+const VERSION = 'v0.4.3';
 document.getElementById('version').textContent = VERSION;
 
 const host = window.location.host;
@@ -36,6 +36,9 @@ let _over = false;  // python running
 
 const responseCallbacks = {};
 const handlers = {};
+
+const KEEPALIVE_DELAY = 10000; // 10s
+let _keepaliveTimeout = null;
 
 let _ws = null;
 let _idCounter = 0;
@@ -744,16 +747,23 @@ function sendWS (event, data, cb) {
     msg.id = getId()
     responseCallbacks[msg.id] = cb
   }
+  if(_keepaliveTimeout) {
+    clearTimeout(_keepaliveTimeout);
+    _keepaliveTimeout = null;
+  }
   if (_ws && _ws.readyState === _ws.OPEN) {
     _ws.send(JSON.stringify(msg))
+    _keepaliveTimeout = setTimeout(() => { sendWS('__keepAlive', null); }, KEEPALIVE_DELAY);
   } else if (_ws && _ws.readyState === _ws.CLOSED) {
     connectWS(() => {
       _ws.send(JSON.stringify(msg))
+      _keepaliveTimeout = setTimeout(() => { sendWS('__keepAlive', null); }, KEEPALIVE_DELAY);
     })
   } else {
     waitForConnection(() => {
       if (_ws) {
         _ws.send(JSON.stringify(msg))
+        _keepaliveTimeout = setTimeout(() => { sendWS('__keepAlive', null); }, KEEPALIVE_DELAY);
       }
       // FIXME else : missing WS ?
     })

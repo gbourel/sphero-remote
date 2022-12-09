@@ -24,3 +24,9 @@ Un élève connecté à l'ENT peut envoyer son programme vers le robot Sphero.
 Page HTML basique, pour tester
 
 `npm start`
+
+
+## TODO
+
+ * handle bluetooth error in bluetooth server
+
