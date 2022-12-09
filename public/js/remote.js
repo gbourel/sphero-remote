@@ -5,7 +5,7 @@ document.getElementById('version').textContent = VERSION;
 
 const host = window.location.host;
 const dev = host.startsWith('localhost') || host.startsWith('ileauxsciences.test')
-              || location.href.match('#debug');
+              || true;
 let debug = () => {};
 if(dev) {
   debug = console.info;
