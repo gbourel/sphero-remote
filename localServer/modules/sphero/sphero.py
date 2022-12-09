@@ -10,6 +10,9 @@ import bluepy
 import yaml
 from .util import *
 
+# Debugging
+mock=False
+
 #should it be in a different format?
 RobotControlService = "22bb746f2ba075542d6f726568705327"
 BLEService = "22bb746f2bb075542d6f726568705327"
@@ -203,6 +206,8 @@ class Sphero(object):
         """
         Connects the sphero with the address given in the constructor
         """
+        if mock:
+            return
         self._device = bluepy.btle.Peripheral(self._addr, addrType=bluepy.btle.ADDR_TYPE_RANDOM)
         self._notifier = DelegateObj(self, self._notification_lock)
         #set notifier to be notified
@@ -277,9 +282,11 @@ class Sphero(object):
         packet = [sop1,sop2,did,cid,seq,dlen] + data_list
         packet += [cal_packet_checksum(packet[2:]).to_bytes(1,'big')] #calculate the checksum
         #write the command to Sphero
-        #print("cmd:{} packet:{}".format(cid, b"".join(packet)))
-        with self._notification_lock:
-            self._cmd_characteristics[CommandsCharacteristic].write(b"".join(packet))
+        if mock:
+            print("cmd:{} packet:{}".format(cid, b"".join(packet)))
+        else:
+            with self._notification_lock:
+                self._cmd_characteristics[CommandsCharacteristic].write(b"".join(packet))
         return seq_val        
 
 

@@ -48,7 +48,7 @@ async def get_status(ws, data=None):
   return status
 
 async def add_program(ws, data=None):
-  print(f"Add program {json.dumps(data)}")
+  print(f"Add program {json.dumps(data)}\n")
   if(len(status["programs"]) > 0):
     data["state"] = "WAITING"
   else:
@@ -60,7 +60,6 @@ async def add_program(ws, data=None):
     val = cur.execute("INSERT INTO programs(studentId, student, state, program) VALUES(?,?,?,?)",
       (data['studentId'], data["student"], data["state"], data['program']))
     data["id"] = cur.lastrowid
-    print('Last', data["id"])
     status["programs"].append(data)
   else:
     val = cur.execute("UPDATE programs SET program=? WHERE id=?",
@@ -84,11 +83,11 @@ async def start_program(ws, data=None):
         with open('remote_prgm.py', 'w') as file:
           file.write(prgm["program"])
         subprocess.run(['python3', 'remote_prgm.py'], shell=False, check=True)
-        status["programs"].remove(prgm)
         prgm["state"] = "DONE"
       except Exception as e:
         print(f"Error {e}")
         prgm["state"] = "ERROR"
+      status["programs"].remove(prgm)
       val = cur.execute("UPDATE programs SET state=? WHERE id=?", (prgm["state"], prgm["id"]))
       db.commit()
       if len(status["programs"]) > 0:
