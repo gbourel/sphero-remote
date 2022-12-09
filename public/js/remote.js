@@ -1,6 +1,6 @@
 (function (){
 
-const VERSION = 'v0.4.1';
+const VERSION = 'v0.4.2';
 document.getElementById('version').textContent = VERSION;
 
 const host = window.location.host;
@@ -624,8 +624,8 @@ for (let e of elts) {
 }
 
 
-if(location.href.endsWith('teacher.html')) {
-  initTeacher()
+if(location.href.match('teacher.html')) {
+  initTeacher();
 } else {
   initClient();
 }
