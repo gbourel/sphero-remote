@@ -28,5 +28,9 @@ Page HTML basique, pour tester
 
 ## TODO
 
- * handle bluetooth error in bluetooth server
+ * static check python program on send (client side)
+ * feedback for python running error
+ * sensors values as CSV
+ * sensors values as graph
+ * handle bluetooth connection error in bluetooth server
 
