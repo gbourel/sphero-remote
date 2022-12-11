@@ -1,0 +1,17 @@
+version: '3'
+
+volumes:
+  modules:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: "$PWD/modules"
+
+services:
+  python_runner:
+    image: python:alpine3.17
+    working_dir: /opt
+    volumes:
+      - modules:/opt:ro
+
