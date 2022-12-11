@@ -80,12 +80,12 @@ async def start_program(ws, data=None):
       prgm["state"] = "RUNNING"
       await ws.send(json.dumps(status))
       try:
-        with open('remote_prgm.py', 'w') as file:
+        with open('./modules/remote_prgm.py', 'w') as file:
           file.write(prgm["program"])
-        subprocess.run(['python3', 'remote_prgm.py'], shell=False, check=True)
+        subprocess.run(['docker-compose', 'run', 'python_runner', '/usr/local/bin/python', 'remote_prgm.py'], shell=False, check=True)
         prgm["state"] = "DONE"
       except Exception as e:
-        print(f"Error {e}")
+        print(f"Error: {e}")
         prgm["state"] = "ERROR"
       status["programs"].remove(prgm)
       val = cur.execute("UPDATE programs SET state=? WHERE id=?", (prgm["state"], prgm["id"]))
